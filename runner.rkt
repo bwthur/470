@@ -34,14 +34,8 @@
        (cadr parsed-code))
       ((equal? (car parsed-code) 'var-exp)
        (resolve env (cadr parsed-code)))
-      ((equal? (car parsed-code) 'bool-exp)
-       (run-bool-exp (cadr parsed-code)
-                     (run-neo-parsed-code (caddr parsed-code) env)
-                     (run-neo-parsed-code (cadddr parsed-code) env)))
-      ((equal? (car parsed-code) 'math-exp)
-       (run-math-exp (cadr parsed-code)
-                     (run-neo-parsed-code (caddr parsed-code) env)
-                     (run-neo-parsed-code (cadddr parsed-code) env)))
+      ((equal? (car parsed-code) 'bool-exp) (run-bool-parsed-code parsed-code env))
+      ((equal? (car parsed-code) 'math-exp) (run-math-parsed-code parsed-code env))
       ((equal? (car parsed-code) 'ask-exp)
        (if (run-neo-parsed-code (cadr parsed-code) env)
            (run-neo-parsed-code (caddr parsed-code) env)
@@ -58,6 +52,56 @@
             )
       )
     ) 
+  )
+
+;runs boolean parsed code
+(define run-bool-parsed-code
+  (lambda(parsed-code env)
+    (run-bool-exp (cadr parsed-code)
+                  (run-neo-parsed-code (caddr parsed-code) env)
+                  (run-neo-parsed-code (cadddr parsed-code) env))
+  )
+)
+
+;HW 12 ↓
+
+(define run-bool-exp
+  (lambda (op num1 num2)
+    (cond
+      ((equal? op '>) (> num1 num2))
+      ((equal? op '<) (< num1 num2))
+      ((equal? op '>=) (>= num1 num2))
+      ((equal? op '<=) (<= num1 num2))
+      ((equal? op '==) (= num1 num2))
+      ((equal? op '!=) (not (= num1 num2)))
+      ((equal? op '&&) (and num1 num2))
+      ((equal? op '||) (or num1 num2))
+      (else (not num1))
+      )
+    )
+  )
+
+;runs math parsed code
+(define run-math-parsed-code
+  (lambda(parsed-code env)
+           (run-math-exp (cadr parsed-code)
+                     (run-neo-parsed-code (caddr parsed-code) env)
+                     (run-neo-parsed-code (cadddr parsed-code) env))
+    )
+  )
+
+(define run-math-exp
+  (lambda (op num1 num2)
+    (cond
+      ((equal? op '+) (+ num1 num2))
+      ((equal? op '-) (- num1 num2))
+      ((equal? op '*) (* num1 num2))
+      ((equal? op '/) (/ num1 num2))
+      ((equal? op '//) (quotient num1 num2))
+      ((equal? op '%) (modulo num1 num2))
+      (else #false)
+      )
+    )
   )
 
 
