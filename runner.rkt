@@ -3,28 +3,46 @@
 (require "utility.rkt")
 
 ;resolve value from variable environment
-(define resolve
-  (lambda (environment varname)
+(define resolve_scope
+  (lambda (scope varname)
     (cond
-      ((null? environment) #false)
-      ((equal? (caar environment) varname) (cadar environment))
-      (else (resolve (cdr environment) varname))
+      ((null? scope) #false)
+      ((equal? (caar scope) varname) (cadar scope))
+      (else (resolve_scope (cdr scope) varname))
       )
     )
   )
 
-(define extend-env
-  (lambda (list-of-varname list-of-value env)
+(define resolve_env
+  (lambda (environment varname)
     (cond
-      ((null? list-of-varname) env)
-      ((null? list-of-value) env)
-      (else (extend-env (cdr list-of-varname) (cdr list-of-value)
-       (cons (list (car list-of-varname)
-                   (car list-of-value))
-             env)))
+      ((null? environment) #false)
+      ((null? (car environment)) (resolve_env (cdr environment) varname))
+      ((equal? 'global (car (car environment))) (resolve_scope (cdr (car environment)) varname))
+      (else (let ((resolved_result (resolve_scope (car environment) varname)))
+              (if (equal? resolved_result #false)
+                  (resolve_env (cdr environment) varname)
+                  resolved_result
+                  )
+              )
+       )
       )
     )
   )
+
+(define extend-scope
+  (lambda (list-of-varname list-of-value scope) ;((x y z) (1 2 3) env)
+    (cond
+      ((null? list-of-varname) scope)
+      ((null? list-of-value) scope)
+      (else (extend-scope (cdr list-of-varname) (cdr list-of-value)
+       (cons (list (car list-of-varname)
+                   (car list-of-value))
+             scope)))
+      )
+    )
+  )
+
 
 (define run-neo-parsed-code
   (lambda (parsed-code env)
@@ -33,7 +51,7 @@
       ((equal? (car parsed-code) 'num-exp)
        (cadr parsed-code))
       ((equal? (car parsed-code) 'var-exp)
-       (resolve env (cadr parsed-code)))
+       (resolve_env env (cadr parsed-code)))
       ((equal? (car parsed-code) 'bool-exp) (run-bool-parsed-code (cdr parsed-code) env))
       ((equal? (car parsed-code) 'math-exp)
        (run-math-exp (cadr parsed-code)
@@ -49,7 +67,7 @@
        (run-let-exp parsed-code env))
       (else (run-neo-parsed-code
              (cadr parsed-code)
-             (extend-env
+             (extend-scope
               (cadr (cadr (cadr parsed-code)))
               (map (lambda (exp) (run-neo-parsed-code exp env)) (caddr parsed-code))
               env)
@@ -108,7 +126,7 @@
   (lambda (parsed-code env)
     (let* ((list-of-names (getVarnames (elementAt parsed-code 1)))
           (list-of-values (getValues (elementAt parsed-code 1)))
-          (new_env (extend-env list-of-names list-of-values env))
+          (new_env (extend-scope list-of-names list-of-values env))
           (body (elementAt parsed-code 2)))
     (run-neo-parsed-code body new_env)
     )
