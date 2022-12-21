@@ -62,7 +62,10 @@
 
 (define neo-let-code-parser
   (lambda (neo-code)
-    (list 'let-exp (elementAt neo-code 1) (neo-parser (elementAt neo-code 2)))
+    (list 'let-exp
+          (map (lambda (pair) (list (car pair) (neo-parser (elementAt pair 1))))
+               (elementAt neo-code 1))
+          (neo-parser (elementAt neo-code 2)))
     )
   )
 
