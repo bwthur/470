@@ -102,6 +102,12 @@
        (run-let-exp parsed-code env))
       ((equal? (car parsed-code) 'print-exp)
        (run-print-exp (cadr parsed-code) env))
+      ((equal? (car parsed-code) 'assign-exp)
+       (run-assign-exp (elementAt parsed-code 1)
+                       (run-neo-parsed-code (elementAt parsed-code 2) env)
+                       env))
+      ((equal? (car parsed-code) 'block-exp)
+       (run-block-exp (cdr parsed-code) env))
       (else (run-neo-parsed-code
              (cadr parsed-code)
              (push_scope_to_env (cadr (cadr (cadr parsed-code)))
@@ -113,6 +119,7 @@
       )
     ) 
   )
+  
 
 
 ;run bool parsed code
@@ -199,5 +206,42 @@
                                            (run-neo-parsed-code parsed-code env))))
     )
   )
+
+(define run-assign-exp
+  (lambda (varname value env)
+    (cond
+      ((null? env) #false)
+      ((equal? (caar env) 'global)
+       (cons (list (list varname value)) env))
+      (else (let*
+          ((new-local-scope (cons (list varname value) (car env)))
+           (under-env (cdr env)))
+        (cons new-local-scope under-env))
+      )
+      )
+    )
+  )
+
+(define run-block-exp
+  (lambda (parsed-list-exp env)
+    (cond
+      ((null? parsed-list-exp) '())
+      ((equal? (caar parsed-list-exp) 'assign-exp)
+       (run-block-exp
+        (cdr parsed-list-exp)
+        (run-assign-exp
+         (cadr (car parsed-list-exp))
+         (run-neo-parsed-code (elementAt (car parsed-list-exp) 2) env)
+         env)))
+      (else
+       (let ((return (run-neo-parsed-code (car parsed-list-exp) env)))
+         (if (void? return) (run-block-exp (cdr parsed-list-exp) env)
+                         (cons return (run-block-exp (cdr parsed-list-exp) env))
+                         )
+         )
+      )
+    )
+  )
+)
 
 (provide (all-defined-out))
