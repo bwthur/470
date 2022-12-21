@@ -14,6 +14,7 @@
       ((equal? (car neo-code) 'function) (neo-function-code-parser neo-code))
       ((equal? (car neo-code) 'call) (neo-call-code-parser neo-code))
       ((equal? (car neo-code) 'local-vars) (neo-let-code-parser neo-code))
+      ((equal? (car neo-code) 'print) (list 'print-exp (neo-parser (cadr neo-code))))
       (else (map neo-parser neo-code))
       )
     )

@@ -100,6 +100,8 @@
        (run-neo-parsed-code (cadr (caddr parsed-code)) env))
       ((equal? (car parsed-code) 'let-exp)
        (run-let-exp parsed-code env))
+      ((equal? (car parsed-code) 'print-exp)
+       (run-print-exp (cadr parsed-code) env))
       (else (run-neo-parsed-code
              (cadr parsed-code)
              (push_scope_to_env (cadr (cadr (cadr parsed-code)))
@@ -161,21 +163,41 @@
 
 (define run-let-exp
   (lambda (parsed-code env)
-    ;((a (num-exp 7)) (b (var-exp a)) (x (var-exp b))) > ((a 7) (b 7) (x 7))
-    ;(a (num-exp 7)) -> (a 7) < (list (car code) (run-neo-parsed-code (cadr code) env)))
-    ;update map with finished cascade-update-env
-    (let* ((resolved-var-list (map (lambda (pair)
-                                     (list (car pair) (run-neo-parsed-code (cadr pair) env)))
-                                   (elementAt parsed-code 1)))
-           (list-of-names (getVarnames (elementAt parsed-code 1)))
-           ;list-of-values = ((num-exp 7) (var-exp a) (var-exp b))
-           ;body = (math + (var-exp x) (var-exp a))
-          (list-of-values (getValues resolved-var-list))
-          (new_env (extend_local_scope list-of-names list-of-values env))
-          ;new variables will be added to the local scope
+    (let* ((new_env (cascade-update-env (elementAt parsed-code 1) env))
           (body (elementAt parsed-code 2)))
-    (run-neo-parsed-code body new_env)
+      (run-neo-parsed-code body new_env)
     )
   )
 )
+
+(define cascade-update-env
+  (lambda (parsed-scope env)
+    (if (null? parsed-scope) env
+        (let* (
+               (local-scope (if (equal? (car (car env)) 'global)
+                                '()
+                                (car env)))
+               (global-scope-env (pop_env_to_global_scope env))
+
+               (first-name-value-pair (car parsed-scope))
+               (new-local-scope (cons
+                                 (list
+                                  (car first-name-value-pair)
+                                  (run-neo-parsed-code (cadr first-name-value-pair) env))
+                                 local-scope))
+               (new_env (cons new-local-scope global-scope-env))
+               )
+          (cascade-update-env (cdr parsed-scope) new_env)
+          )
+      )
+    )
+  )
+
+(define run-print-exp
+  (lambda (parsed-code env)
+    (display (string-append "**screen** " (number->string
+                                           (run-neo-parsed-code parsed-code env))))
+    )
+  )
+
 (provide (all-defined-out))
